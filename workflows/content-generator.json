@@ -1,0 +1,191 @@
+{
+  "name": "Marketer: Content Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Daily 6AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst CONFIG_PATH = '/home/node/.n8n/marketer/config.json';\nconst PROMPTS_PATH = '/home/node/.n8n/marketer/prompts.json';\nconst DRAFTS_PATH = '/home/node/.n8n/marketer/drafts.json';\nconst config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));\nconst prompts = JSON.parse(fs.readFileSync(PROMPTS_PATH, 'utf8'));\nconst drafts = JSON.parse(fs.readFileSync(DRAFTS_PATH, 'utf8'));\nreturn [{ json: { config, prompts, drafts, paths: { config: CONFIG_PATH, prompts: PROMPTS_PATH, drafts: DRAFTS_PATH } } }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "Load Config & Drafts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { config, prompts, drafts } = $input.first().json;\nconst rotation = config.contentRotation;\nconst lastType = drafts.lastContentType;\nconst available = rotation.filter(t => t !== lastType);\nconst picked = available[Math.floor(Math.random() * available.length)];\nconst typeConfig = prompts.contentTypes[picked];\nconst projectList = config.profile.projects.map(p => `${p.name}: ${p.description}`).join('\\n');\nconst recentTopics = drafts.recentTopics.slice(-5).join(', ') || 'none yet';\nlet prompt = prompts.generatePrompt;\nprompt = prompt.replace('{{contentType}}', picked);\nprompt = prompt.replace('{{typeInstruction}}', typeConfig.instruction);\nprompt = prompt.replace('{{typeExamples}}', typeConfig.examples.join('\\n'));\nprompt = prompt.replace('{{linkedinRules}}', prompts.platformRules.linkedin.instruction);\nprompt = prompt.replace('{{xRules}}', prompts.platformRules.x.instruction);\nprompt = prompt.replace('{{stack}}', config.profile.stack.join(', '));\nprompt = prompt.replace('{{projects}}', projectList);\nprompt = prompt.replace('{{tone}}', config.profile.tone);\nprompt = prompt.replace('{{niche}}', config.profile.niche);\nprompt = prompt.replace('{{recentTopics}}', recentTopics);\nreturn [{ json: { prompt, systemPrompt: prompts.system, contentType: picked } }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Pick Type & Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ contents: [{ parts: [{ text: $json.prompt }] }], systemInstruction: { parts: [{ text: $json.systemPrompt }] }, generationConfig: { temperature: 0.9, topP: 0.95, responseMimeType: 'application/json' } }) }}"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "Call Gemini API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst DRAFTS_PATH = '/home/node/.n8n/marketer/drafts.json';\nconst drafts = JSON.parse(fs.readFileSync(DRAFTS_PATH, 'utf8'));\nconst geminiResponse = $input.first().json;\nconst rawText = geminiResponse.candidates[0].content.parts[0].text;\nconst content = JSON.parse(rawText);\nconst allItems = $('Pick Type & Build Prompt').first().json;\nconst contentType = allItems.contentType;\nconst now = new Date();\nconst dateStr = now.toISOString().split('T')[0];\nconst draftCount = drafts.drafts.filter(d => d.id.startsWith(dateStr)).length + 1;\nconst draftId = `${dateStr}-${String(draftCount).padStart(3, '0')}`;\nconst draft = {\n  id: draftId,\n  contentType: contentType,\n  topic: content.topic,\n  linkedin: { text: content.linkedin },\n  x: content.x,\n  status: 'pending',\n  createdAt: now.toISOString(),\n  publishedAt: null,\n  postUrls: { linkedin: null, x: null }\n};\ndrafts.drafts.push(draft);\ndrafts.lastContentType = contentType;\ndrafts.recentTopics.push(content.topic);\nif (drafts.recentTopics.length > 10) {\n  drafts.recentTopics = drafts.recentTopics.slice(-10);\n}\nfs.writeFileSync(DRAFTS_PATH, JSON.stringify(drafts, null, 2));\nreturn [{ json: { draft } }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000005",
+      "name": "Parse Response & Save Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const draft = $input.first().json.draft;\nconst REVIEW_BASE = $env.MARKETER_REVIEW_WEBHOOK || 'https://YOUR_N8N_DOMAIN/webhook/marketer-review';\nconst DISCORD_WEBHOOK = $env.MARKETER_DISCORD_WEBHOOK || 'https://discord.com/api/webhooks/YOUR_WEBHOOK';\nconst approveUrl = `${REVIEW_BASE}?action=approve&id=${draft.id}`;\nconst rejectUrl = `${REVIEW_BASE}?action=reject&id=${draft.id}`;\nconst typeLabels = {\n  tech_tip: 'Tech Tip',\n  building_in_public: 'Building in Public',\n  thought_leadership: 'Thought Leadership',\n  engagement: 'Engagement',\n  curated: 'Curated'\n};\nconst xText = draft.x.isThread\n  ? draft.x.threadParts.map((t, i) => `**${i + 1}.** ${t}`).join('\\n')\n  : draft.x.text;\nconst discordPayload = {\n  embeds: [{\n    title: `New Draft: ${typeLabels[draft.contentType] || draft.contentType}`,\n    description: `**Topic:** ${draft.topic}`,\n    color: 3447003,\n    fields: [\n      { name: 'LinkedIn', value: draft.linkedin.text.substring(0, 1024) },\n      { name: `X ${draft.x.isThread ? '(Thread)' : '(Tweet)'}`, value: xText.substring(0, 1024) },\n      { name: 'Actions', value: `[Approve](${approveUrl}) | [Reject](${rejectUrl})` }\n    ],\n    footer: { text: `Draft ID: ${draft.id} | ${new Date().toLocaleString('en-CA', { timeZone: 'America/Edmonton' })}` }\n  }]\n};\nreturn [{ json: { discordPayload, discordWebhook: DISCORD_WEBHOOK } }];"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000006",
+      "name": "Format Discord Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.discordWebhook }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.discordPayload) }}"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000007",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "Daily 6AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Load Config & Drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Config & Drafts": {
+      "main": [
+        [
+          {
+            "node": "Pick Type & Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Type & Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Gemini API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Gemini API": {
+      "main": [
+        [
+          {
+            "node": "Parse Response & Save Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Response & Save Draft": {
+      "main": [
+        [
+          {
+            "node": "Format Discord Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Discord Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [
+    {
+      "name": "marketer"
+    }
+  ],
+  "meta": {
+    "instanceId": ""
+  }
+}
