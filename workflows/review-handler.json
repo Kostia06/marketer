@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const fs = require('fs');\nconst DRAFTS_PATH = '/home/node/.n8n/marketer/drafts.json';\nconst query = $input.first().json.query;\nconst action = query.action;\nconst draftId = query.id;\nif (!action || !draftId) {\n  return [{ json: { error: true, message: 'Missing action or id parameter' } }];\n}\nconst drafts = JSON.parse(fs.readFileSync(DRAFTS_PATH, 'utf8'));\nconst draft = drafts.drafts.find(d => d.id === draftId);\nif (!draft) {\n  return [{ json: { error: true, message: `Draft ${draftId} not found` } }];\n}\nif (draft.status !== 'pending') {\n  return [{ json: { error: false, action: 'already_handled', draft, message: `Draft already ${draft.status}` } }];\n}\nreturn [{ json: { error: false, action, draft, draftId, draftsPath: DRAFTS_PATH } }];"
+        "jsCode": "const fs = require('fs');\nconst DRAFTS_PATH = '/home/node/.n8n/marketer/data/drafts.json';\nconst query = $input.first().json.query;\nconst action = query.action;\nconst draftId = query.id;\nif (!action || !draftId) {\n  return [{ json: { error: true, message: 'Missing action or id parameter' } }];\n}\nconst drafts = JSON.parse(fs.readFileSync(DRAFTS_PATH, 'utf8'));\nconst draft = drafts.drafts.find(d => d.id === draftId);\nif (!draft) {\n  return [{ json: { error: true, message: `Draft ${draftId} not found` } }];\n}\nif (draft.status !== 'pending') {\n  return [{ json: { error: false, action: 'already_handled', draft, message: `Draft already ${draft.status}` } }];\n}\nreturn [{ json: { error: false, action, draft, draftId, draftsPath: DRAFTS_PATH } }];"
       },
       "id": "load-draft",
       "name": "Load Draft",

@@ -28,12 +28,8 @@
     "curated"
   ],
   "paths": {
-    "drafts": "/home/node/.n8n/marketer/drafts.json",
-    "config": "/home/node/.n8n/marketer/config.json",
-    "prompts": "/home/node/.n8n/marketer/prompts.json"
-  },
-  "webhooks": {
-    "reviewBase": "https://YOUR_N8N_DOMAIN/webhook/marketer-review",
-    "discordWebhook": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+    "drafts": "/home/node/.n8n/marketer/data/drafts.json",
+    "config": "/home/node/.n8n/marketer/config/config.json",
+    "prompts": "/home/node/.n8n/marketer/config/prompts.json"
   }
 }

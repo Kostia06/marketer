@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const fs = require('fs');\nconst DRAFTS_PATH = '/home/node/.n8n/marketer/drafts.json';\nconst drafts = JSON.parse(fs.readFileSync(DRAFTS_PATH, 'utf8'));\nconst draft = drafts.drafts.find(d => d.status === 'approved');\nif (!draft) {\n  return [{ json: { hasDraft: false } }];\n}\nreturn [{ json: { hasDraft: true, draft, draftsPath: DRAFTS_PATH } }];"
+        "jsCode": "const fs = require('fs');\nconst DRAFTS_PATH = '/home/node/.n8n/marketer/data/drafts.json';\nconst drafts = JSON.parse(fs.readFileSync(DRAFTS_PATH, 'utf8'));\nconst draft = drafts.drafts.find(d => d.status === 'approved');\nif (!draft) {\n  return [{ json: { hasDraft: false } }];\n}\nreturn [{ json: { hasDraft: true, draft, draftsPath: DRAFTS_PATH } }];"
       },
       "id": "node-find-draft",
       "name": "Find Approved Draft",
@@ -80,6 +80,28 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "https://api.linkedin.com/v2/userinfo",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "node-get-linkedin-id",
+      "name": "Get LinkedIn Person ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 180],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "LINKEDIN_CREDENTIAL_ID",
+          "name": "LinkedIn Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://api.linkedin.com/v2/ugcPosts",
         "authentication": "predefinedCredentialType",
@@ -99,7 +121,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ author: 'urn:li:person:' + $env.LINKEDIN_PERSON_ID, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: $json.draft.linkedin.text }, shareMediaCategory: 'NONE' } }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } }) }}",
+        "jsonBody": "={{ JSON.stringify({ author: 'urn:li:person:' + $('Get LinkedIn Person ID').first().json.sub, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: $('Has Approved Draft?').first().json.draft.linkedin.text }, shareMediaCategory: 'NONE' } }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } }) }}",
         "options": {
           "timeout": 15000
         }
@@ -108,7 +130,7 @@
       "name": "Post to LinkedIn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1340, 180],
+      "position": [1560, 180],
       "onError": "continueRegularOutput",
       "credentials": {
         "httpHeaderAuth": {
@@ -231,7 +253,7 @@
       "main": [
         [
           {
-            "node": "Post to LinkedIn",
+            "node": "Get LinkedIn Person ID",
             "type": "main",
             "index": 0
           },
@@ -242,6 +264,17 @@
           }
         ],
         []
+      ]
+    },
+    "Get LinkedIn Person ID": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Post to LinkedIn": {
