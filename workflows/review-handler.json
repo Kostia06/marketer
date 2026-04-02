@@ -129,14 +129,14 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.MARKETER_DISCORD_WEBHOOK }}",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"embeds\": [\n    {\n      \"title\": \"{{ $json.status === 'approved' ? 'Draft Approved ✅' : 'Draft Rejected ❌' }}\",\n      \"color\": {{ $json.status === 'approved' ? 5763719 : 15548997 }},\n      \"description\": \"**Type:** {{ $json.contentType }}\\n**Topic:** {{ $json.topic }}\",\n      \"footer\": {\n        \"text\": \"Draft ID: {{ $json.draftId }}\"\n      }\n    }\n  ]\n}",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHAT_ID, text: ($json.status === 'approved' ? '✅ Draft Approved' : '❌ Draft Rejected') + '\\n\\n' + $json.contentType + ': ' + $json.topic + '\\n\\nDraft ID: ' + $json.draftId, parse_mode: 'HTML' }) }}",
         "options": {}
       },
-      "id": "discord-confirmation",
-      "name": "Discord Confirmation",
+      "id": "telegram-confirmation",
+      "name": "Telegram Confirmation",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1120, 220]
@@ -265,7 +265,7 @@
       "main": [
         [
           {
-            "node": "Discord Confirmation",
+            "node": "Telegram Confirmation",
             "type": "main",
             "index": 0
           }
@@ -276,14 +276,14 @@
       "main": [
         [
           {
-            "node": "Discord Confirmation",
+            "node": "Telegram Confirmation",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Discord Confirmation": {
+    "Telegram Confirmation": {
       "main": [
         [
           {

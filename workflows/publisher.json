@@ -188,16 +188,16 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.MARKETER_DISCORD_WEBHOOK }}",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ embeds: [{ title: 'Published! 🚀', color: 5763719, fields: [{ name: 'LinkedIn', value: $json.linkedinSuccess ? ($json.linkedinUrl ? `[View Post](${$json.linkedinUrl})` : 'Posted successfully') : 'Failed to post', inline: true }, { name: 'X / Twitter', value: $json.xSuccess ? ($json.xUrl ? `[View Post](${$json.xUrl})` : 'Posted successfully') : 'Failed to post', inline: true }, { name: 'Topic', value: $json.topic || 'N/A', inline: false }], footer: { text: `Draft ID: ${$json.draftId} • ${new Date().toISOString()}` } }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHAT_ID, text: 'Published!\\n\\n' + $json.topic + '\\n\\nLinkedIn: ' + ($json.linkedinSuccess ? ($json.linkedinUrl || 'Posted') : 'Failed') + '\\nX: ' + ($json.xSuccess ? ($json.xUrl || 'Posted') : 'Failed') + '\\n\\nDraft ID: ' + $json.draftId, parse_mode: 'HTML' }) }}",
         "options": {
           "timeout": 10000
         }
       },
-      "id": "node-discord-published",
-      "name": "Discord: Published",
+      "id": "node-telegram-published",
+      "name": "Telegram: Published",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [2000, 300],
@@ -314,7 +314,7 @@
       "main": [
         [
           {
-            "node": "Discord: Published",
+            "node": "Telegram: Published",
             "type": "main",
             "index": 0
           }

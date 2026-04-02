@@ -73,10 +73,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const draft = $input.first().json.draft;\nconst REVIEW_BASE = $env.MARKETER_REVIEW_WEBHOOK || 'https://YOUR_N8N_DOMAIN/webhook/marketer-review';\nconst DISCORD_WEBHOOK = $env.MARKETER_DISCORD_WEBHOOK || 'https://discord.com/api/webhooks/YOUR_WEBHOOK';\nconst approveUrl = `${REVIEW_BASE}?action=approve&id=${draft.id}`;\nconst rejectUrl = `${REVIEW_BASE}?action=reject&id=${draft.id}`;\nconst typeLabels = {\n  tech_tip: 'Tech Tip',\n  building_in_public: 'Building in Public',\n  thought_leadership: 'Thought Leadership',\n  engagement: 'Engagement',\n  curated: 'Curated'\n};\nconst xText = draft.x.isThread\n  ? draft.x.threadParts.map((t, i) => `**${i + 1}.** ${t}`).join('\\n')\n  : draft.x.text;\nconst discordPayload = {\n  embeds: [{\n    title: `New Draft: ${typeLabels[draft.contentType] || draft.contentType}`,\n    description: `**Topic:** ${draft.topic}`,\n    color: 3447003,\n    fields: [\n      { name: 'LinkedIn', value: draft.linkedin.text.substring(0, 1024) },\n      { name: `X ${draft.x.isThread ? '(Thread)' : '(Tweet)'}`, value: xText.substring(0, 1024) },\n      { name: 'Actions', value: `[Approve](${approveUrl}) | [Reject](${rejectUrl})` }\n    ],\n    footer: { text: `Draft ID: ${draft.id} | ${new Date().toLocaleString('en-CA', { timeZone: 'America/Edmonton' })}` }\n  }]\n};\nreturn [{ json: { discordPayload, discordWebhook: DISCORD_WEBHOOK } }];"
+        "jsCode": "const draft = $input.first().json.draft;\nconst REVIEW_BASE = $env.MARKETER_REVIEW_WEBHOOK || 'https://YOUR_N8N_DOMAIN/webhook/marketer-review';\nconst TELEGRAM_TOKEN = $env.TELEGRAM_BOT_TOKEN;\nconst TELEGRAM_CHAT_ID = $env.TELEGRAM_CHAT_ID;\nconst approveUrl = `${REVIEW_BASE}?action=approve&id=${draft.id}`;\nconst rejectUrl = `${REVIEW_BASE}?action=reject&id=${draft.id}`;\nconst typeLabels = {\n  tech_tip: 'Tech Tip',\n  building_in_public: 'Building in Public',\n  thought_leadership: 'Thought Leadership',\n  engagement: 'Engagement',\n  curated: 'Curated'\n};\nconst xText = draft.x.isThread\n  ? draft.x.threadParts.map((t, i) => `${i + 1}. ${t}`).join('\\n')\n  : draft.x.text;\nconst message = `<b>New Draft: ${typeLabels[draft.contentType] || draft.contentType}</b>\\n\\n<b>Topic:</b> ${draft.topic}\\n\\n<b>LinkedIn:</b>\\n${draft.linkedin.text.substring(0, 1000)}\\n\\n<b>X ${draft.x.isThread ? '(Thread)' : '(Tweet)'}:</b>\\n${xText.substring(0, 1000)}\\n\\n<i>Draft ID: ${draft.id}</i>`;\nconst telegramPayload = {\n  chat_id: TELEGRAM_CHAT_ID,\n  text: message,\n  parse_mode: 'HTML',\n  reply_markup: {\n    inline_keyboard: [\n      [\n        { text: 'Approve', url: approveUrl },\n        { text: 'Reject', url: rejectUrl }\n      ]\n    ]\n  }\n};\nreturn [{ json: { telegramPayload, telegramUrl: `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage` } }];"
       },
       "id": "a1b2c3d4-0001-0001-0001-000000000006",
-      "name": "Format Discord Message",
+      "name": "Format Telegram Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [1340, 300]
@@ -84,23 +84,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $json.discordWebhook }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "url": "={{ $json.telegramUrl }}",
         "sendBody": true,
-        "bodyContentType": "raw",
-        "rawContentType": "application/json",
-        "body": "={{ JSON.stringify($json.discordPayload) }}"
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.telegramPayload) }}"
       },
       "id": "a1b2c3d4-0001-0001-0001-000000000007",
-      "name": "Send to Discord",
+      "name": "Send to Telegram",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1560, 300]
@@ -155,18 +145,18 @@
       "main": [
         [
           {
-            "node": "Format Discord Message",
+            "node": "Format Telegram Message",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Format Discord Message": {
+    "Format Telegram Message": {
       "main": [
         [
           {
-            "node": "Send to Discord",
+            "node": "Send to Telegram",
             "type": "main",
             "index": 0
           }
