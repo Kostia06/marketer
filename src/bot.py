@@ -12,10 +12,12 @@ from src.config import (
     logger,
 )
 from src.ai import generate_post
-from src.platforms.x import post_to_x
+from src.platforms.x import post_to_x, delete_from_x
 from src.platforms.linkedin import post_to_linkedin
 
 pending_posts: dict[int, dict] = {}
+scheduled_tasks: dict[int, asyncio.Task] = {}
+posted_results: dict[int, dict] = {}
 
 
 async def send_for_approval(app: Application, post: dict):
@@ -65,18 +67,82 @@ async def send_for_approval(app: Application, post: dict):
     logger.info(f"Sent post for approval (message_id={msg.message_id})")
 
 
+async def publish_post(text, image_path, message_id, context):
+    """Publish to X and LinkedIn, then show result with delete button."""
+    x_ok, x_id = post_to_x(text, image_path)
+    li_ok = post_to_linkedin(text)
+
+    results = [
+        "X: posted" if x_ok else "X: failed",
+        "LinkedIn: posted" if li_ok else "LinkedIn: failed",
+    ]
+
+    posted_results[message_id] = {"x_id": x_id, "text": text}
+
+    delete_keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Delete Posts", callback_data=f"delete|{message_id}")]
+    ])
+
+    await context.bot.send_message(
+        chat_id=TELEGRAM_CHAT_ID,
+        text=f"*Post published!*\n" + "\n".join(results) + f"\n\n_{text}_",
+        parse_mode="Markdown",
+        reply_markup=delete_keyboard,
+    )
+
+    if image_path and os.path.exists(image_path):
+        os.unlink(image_path)
+
+
+async def delayed_publish(delay, text, image_path, message_id, context):
+    """Wait then publish. Can be cancelled."""
+    await asyncio.sleep(delay * 60)
+    await publish_post(text, image_path, message_id, context)
+    scheduled_tasks.pop(message_id, None)
+
+
+def edit_msg(query, text, parse_mode="Markdown"):
+    if query.message.photo:
+        return query.edit_message_caption(caption=text, parse_mode=parse_mode)
+    return query.edit_message_text(text, parse_mode=parse_mode)
+
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    action = query.data
     message_id = query.message.message_id
-    post = pending_posts.get(message_id)
 
+    if action.startswith("delete"):
+        ref_id = int(action.split("|")[1])
+        result = posted_results.pop(ref_id, None)
+        if result and result.get("x_id"):
+            ok = delete_from_x(result["x_id"])
+            status = "Deleted from X" if ok else "Failed to delete from X"
+        else:
+            status = "No X post to delete"
+        await query.edit_message_text(
+            f"*{status}*\n(LinkedIn doesn't support delete via API)",
+            parse_mode="Markdown",
+        )
+        return
+
+    if action == "cancel":
+        task = scheduled_tasks.pop(message_id, None)
+        if task:
+            task.cancel()
+        post = pending_posts.pop(message_id, None)
+        if post and post.get("image_path") and os.path.exists(post["image_path"]):
+            os.unlink(post["image_path"])
+        await edit_msg(query, "*Cancelled.* Post will not be published.")
+        return
+
+    post = pending_posts.get(message_id)
     if not post:
         await query.edit_message_text("This post has already been handled.")
         return
 
-    action = query.data
     text = post["text"]
     image_path = post.get("image_path")
 
@@ -84,71 +150,43 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         delay = int(action.split("|")[1])
         pending_posts.pop(message_id, None)
 
-        await query.edit_message_caption(
-            caption=f"*Approved!* Posting in {delay} minutes...\n\n{text}",
-            parse_mode="Markdown",
-        ) if query.message.photo else await query.edit_message_text(
-            f"*Approved!* Posting in {delay} minutes...\n\n{text}",
-            parse_mode="Markdown",
+        cancel_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("Cancel", callback_data="cancel")]
+        ])
+
+        if query.message.photo:
+            await query.edit_message_caption(
+                caption=f"*Approved!* Posting in {delay} minutes...\n\n{text}",
+                parse_mode="Markdown",
+                reply_markup=cancel_keyboard,
+            )
+        else:
+            await query.edit_message_text(
+                f"*Approved!* Posting in {delay} minutes...\n\n{text}",
+                parse_mode="Markdown",
+                reply_markup=cancel_keyboard,
+            )
+
+        pending_posts[message_id] = post
+        task = asyncio.create_task(
+            delayed_publish(delay, text, image_path, message_id, context)
         )
-
-        await asyncio.sleep(delay * 60)
-
-        x_ok = post_to_x(text, image_path)
-        li_ok = post_to_linkedin(text)
-
-        results = [
-            "X (Twitter): posted" if x_ok else "X (Twitter): failed",
-            "LinkedIn: posted" if li_ok else "LinkedIn: failed",
-        ]
-        await context.bot.send_message(
-            chat_id=TELEGRAM_CHAT_ID,
-            text="*Post published!*\n" + "\n".join(results),
-            parse_mode="Markdown",
-        )
-
-        if image_path and os.path.exists(image_path):
-            os.unlink(image_path)
+        scheduled_tasks[message_id] = task
 
     elif action == "postnow":
         pending_posts.pop(message_id, None)
-
-        if query.message.photo:
-            await query.edit_message_caption(caption=f"*Posting now...*\n\n{text}", parse_mode="Markdown")
-        else:
-            await query.edit_message_text(f"*Posting now...*\n\n{text}", parse_mode="Markdown")
-
-        x_ok = post_to_x(text, image_path)
-        li_ok = post_to_linkedin(text)
-
-        results = [
-            "X (Twitter): posted" if x_ok else "X (Twitter): failed",
-            "LinkedIn: posted" if li_ok else "LinkedIn: failed",
-        ]
-        await context.bot.send_message(
-            chat_id=TELEGRAM_CHAT_ID,
-            text="*Post published!*\n" + "\n".join(results),
-            parse_mode="Markdown",
-        )
-
-        if image_path and os.path.exists(image_path):
-            os.unlink(image_path)
+        await edit_msg(query, f"*Posting now...*\n\n{text}")
+        await publish_post(text, image_path, message_id, context)
 
     elif action == "reject":
         pending_posts.pop(message_id, None)
-        if query.message.photo:
-            await query.edit_message_caption(caption="*Post rejected.* Next post at next interval.")
-        else:
-            await query.edit_message_text("*Post rejected.* Next post at next interval.")
+        await edit_msg(query, "*Post rejected.* Next post at next interval.")
         if image_path and os.path.exists(image_path):
             os.unlink(image_path)
 
     elif action == "rewrite":
         pending_posts.pop(message_id, None)
-        if query.message.photo:
-            await query.edit_message_caption(caption="*Rewriting post, one moment...*")
-        else:
-            await query.edit_message_text("*Rewriting post, one moment...*")
+        await edit_msg(query, "*Rewriting post, one moment...*")
         if image_path and os.path.exists(image_path):
             os.unlink(image_path)
         new_post = generate_post()
@@ -157,13 +195,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "*Tech Post Bot is running!*\n\n"
-        f"I fetch the latest tech news every *{POST_INTERVAL_HOURS} hours*, "
-        f"write a post about it, and ask for your approval before posting to X and LinkedIn.\n\n"
+        "*Tech Post Bot*\n\n"
+        f"Posts every *{POST_INTERVAL_HOURS}h* with your approval.\n\n"
+        "Commands:\n"
+        "/generate — AI post from latest news\n"
+        "/post your text here — preview your own post\n"
+        "/tone — refresh style guide\n\n"
         "Buttons:\n"
-        "*Approve* — schedules the post at a random delay\n"
-        "*Reject* — skips it, waits for next interval\n"
-        "*Rewrite* — generates a brand new post right now",
+        "*Approve* — post after random delay\n"
+        "*Post Now* — post immediately\n"
+        "*Reject* — skip\n"
+        "*Rewrite* — regenerate\n"
+        "*Cancel* — stop a scheduled post\n"
+        "*Delete Posts* — remove after publishing",
         parse_mode="Markdown",
     )
 
@@ -171,6 +215,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def generate_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Fetching latest tech news...")
     post = generate_post()
+    await send_for_approval(context.application, post)
+
+
+async def post_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_text = update.message.text.replace("/post", "", 1).strip()
+    if not user_text:
+        await update.message.reply_text("Usage: `/post your text here`", parse_mode="Markdown")
+        return
+    post = {"text": user_text, "source_url": "", "image_path": None}
     await send_for_approval(context.application, post)
 
 
