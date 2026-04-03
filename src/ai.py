@@ -1,7 +1,7 @@
 import json
 from google import genai
 from src.config import GEMINI_API_KEY, logger
-from src.news import fetch_top_stories, fetch_article_image, search_unsplash, download_image
+from src.news import fetch_top_stories, fetch_article_image, download_image
 from src.toner import load_style_guide
 
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -56,7 +56,7 @@ def generate_post() -> dict:
         "- 'apple just added a feature linux had in 2004. innovation. #wwdc'\n"
         "- 'new js framework just dropped. we are now truly blessed #javascript'\n"
         f"{style_block}\n\n"
-        'Return JSON only: {"text": "the post", "source_url": "the article url you picked", "image_keyword": "1-2 word TECH search term for a stock photo, e.g. server rack, code screen, laptop desk, circuit board, data center"}'
+        'Return JSON only: {"text": "the post", "source_url": "the article url you picked"}'
     )
 
     response = client.models.generate_content(
@@ -67,23 +67,14 @@ def generate_post() -> dict:
 
     result = json.loads(response.text.strip())
     source_url = result.get("source_url", "")
-    image_keyword = result.get("image_keyword", "technology")
 
     image_path = None
-
     if source_url:
         image_url = fetch_article_image(source_url)
         if image_url:
             image_path = download_image(image_url)
             if image_path:
                 logger.info(f"Using article image from {image_url}")
-
-    if not image_path:
-        unsplash_url = search_unsplash(image_keyword)
-        if unsplash_url:
-            image_path = download_image(unsplash_url)
-            if image_path:
-                logger.info(f"Using Unsplash image for '{image_keyword}'")
 
     return {
         "text": result["text"],
