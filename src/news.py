@@ -23,6 +23,35 @@ def fetch_top_stories(count=10) -> list[dict]:
     return stories
 
 
+JUNK_IMAGE_PATTERNS = [
+    r"logo",
+    r"icon",
+    r"favicon",
+    r"brand",
+    r"avatar",
+    r"default",
+    r"placeholder",
+    r"og[-_]?image",
+    r"social[-_]?share",
+    r"twitter[-_]?card",
+    r"github\.com",
+    r"gist\.github",
+    r"substack\.com.*?/icons/",
+    r"substack-post-media.*?_256x256",
+    r"medium\.com/_/stat",
+    r"gravatar",
+    r"cdn\.substack",
+    r"wp-content/uploads.*?site[-_]?icon",
+]
+
+MIN_IMAGE_SIZE = 10_000  # 10KB minimum — logos are usually tiny
+
+
+def is_junk_image(url: str) -> bool:
+    url_lower = url.lower()
+    return any(re.search(p, url_lower) for p in JUNK_IMAGE_PATTERNS)
+
+
 def fetch_article_image(url: str) -> str | None:
     try:
         response = requests.get(url, timeout=10, headers={
@@ -34,7 +63,11 @@ def fetch_article_image(url: str) -> str | None:
         ]:
             match = re.search(pattern, response.text, re.IGNORECASE)
             if match:
-                return match.group(1)
+                image_url = match.group(1)
+                if is_junk_image(image_url):
+                    logger.info(f"Skipping junk og:image: {image_url}")
+                    return None
+                return image_url
     except Exception as e:
         logger.error(f"Failed to fetch og:image from {url}: {e}")
     return None
@@ -47,6 +80,9 @@ def download_image(url: str) -> str | None:
         })
         content_type = response.headers.get("content-type", "")
         if response.status_code != 200 or "image" not in content_type:
+            return None
+        if len(response.content) < MIN_IMAGE_SIZE:
+            logger.info(f"Skipping tiny image ({len(response.content)} bytes)")
             return None
         suffix = ".png" if "png" in content_type else ".jpg"
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
