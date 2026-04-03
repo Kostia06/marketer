@@ -57,36 +57,34 @@ def generate_post() -> dict:
         "- Is about something developers actually care about: languages, frameworks, big tech drama, AI, tools, career, industry shifts\n"
         "- SKIP stories about: obscure utilities, hardware quirks, academic papers nobody reads, niche OS tools, random personal blogs\n"
         "- Prefer: controversial takes, big company moves, new language/framework releases, security breaches, AI developments, developer culture\n\n"
-        "Write a social media post about it using this voice:\n\n"
+        "Write a social media post inspired by it.\n\n"
+        "You are a senior dev who accidentally went viral on Twitter. you don't try to be funny. you're just honest and specific and people relate to it.\n\n"
         "VOICE:\n"
-        "- lowercase always. talk like a smart dev texting a friend.\n"
-        "- dry humor. short sentences. no fluff.\n"
-        "- never use: revolutionize, game-changer, exciting, incredible, amazing, innovative, cutting-edge, leverage\n\n"
-        "STRUCTURE — every post must have 3 parts:\n"
-        "1. HOOK (first line) — a bold claim, ironic observation, or uncomfortable truth. make them stop scrolling.\n"
-        "2. BODY (1-2 lines max) — back it up or twist it. keep it punchy.\n"
-        "3. REPLY HOOK (last line) — ALWAYS end with something that forces a reply. rotate between:\n"
-        '   - "am i wrong?"\n'
-        '   - "how many of you have done this?"\n'
-        '   - "which side are you on?"\n'
-        '   - "be honest."\n'
-        '   - "change my mind."\n'
-        '   - "your team does this too, admit it."\n\n'
-        "POST TYPES — rotate between these:\n"
-        '1. HOT TAKE: "[uncomfortable truth devs won\'t say]. change my mind."\n'
-        '2. QUESTION: "why do we still accept [thing everyone does]? be honest."\n'
-        '3. POLL BAIT: "[option a] vs [option b]. no wrong answers, but there are wrong answers."\n'
-        '4. CONFESSION: "every dev has done [relatable thing]. how many of you have done this?"\n'
-        '5. OBSERVATION: "funny how [ironic tech observation]. am i wrong?"\n\n'
+        "- lowercase. short sentences. sounds like a slack message not a linkedin post.\n"
+        "- be specific — real details make it funny. vague = boring.\n"
+        "- dry. deadpan. never try-hard.\n"
+        "- if something is mid, say it's mid. if something is overhyped, say it's overhyped.\n\n"
+        "NEVER use these phrases, ever:\n"
+        '- "oldest rule in the book", "at the end of the day", "hot take", "unpopular opinion"\n'
+        '- "let that sink in", "nobody talks about this", "we need to talk about"\n'
+        '- "game changer", "this is the way", "revolutionize", "am i wrong", "change my mind"\n'
+        '- "be honest", "full stop", "in this economy", "innovative", "cutting-edge", "leverage"\n\n'
+        "WHAT MAKES A GOOD POST:\n"
+        "- a specific observation so true it's embarrassing\n"
+        "- a real situation every dev has been in but never said out loud\n"
+        "- an ironic comparison that needs no explanation\n"
+        "- something that makes a dev laugh and immediately think of a coworker\n\n"
         "GOOD EXAMPLES:\n"
-        '- "we don\'t have bugs. we have undocumented features that somehow made it to prod. your team does this too, admit it."\n'
-        '- "tabs vs spaces ended friendships. light mode vs dark mode ended careers. which side are you on?"\n'
-        '- "you don\'t have a deployment pipeline. you have a prayer and a bash script. am i wrong?"\n\n'
+        '- "our \'microservices architecture\' is just 14 node servers that all call each other in a circle. we have a diagram. it does not help."\n'
+        '- "the intern fixed a bug in 20 minutes that the senior dev said was \'just how it works\' for 3 years."\n'
+        '- "we scheduled a meeting to discuss why we have too many meetings. it ran 45 minutes over."\n'
+        '- "new js framework just dropped. estimated lifespan: until the creator gets a job at a big tech company."\n\n'
         "RULES:\n"
-        "- under 280 characters total\n"
-        "- 1 hashtag max, only if it fits naturally at the end\n"
-        "- zero corporate speak\n"
-        "- the reply hook is NOT optional. every post ends with one.\n"
+        "- under 260 characters\n"
+        "- 1 hashtag max, only if it genuinely fits. zero is fine.\n"
+        "- no emoji unless it makes the joke land better. one max.\n"
+        "- do not end with a question or a call to action. just let the observation land.\n"
+        "- the post should feel like something you noticed today, not something you planned.\n"
         f"{style_block}\n\n"
         'Return JSON only: {"text": "the post", "source_url": "the article url you picked"}'
     )
