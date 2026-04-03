@@ -70,10 +70,11 @@ async def send_for_approval(app: Application, post: dict):
     logger.info(f"Sent post for approval (message_id={msg.message_id})")
 
 
-async def publish_post(text, image_path, message_id, context):
+async def publish_post(text, image_path, message_id, context, source_url=""):
     """Publish to X and LinkedIn, then show result with delete button."""
-    x_ok, x_id = post_to_x(text, image_path)
-    li_ok, li_urn = post_to_linkedin(text, image_path)
+    publish_text = f"{text}\n\n{source_url}" if source_url else text
+    x_ok, x_id = post_to_x(publish_text, image_path)
+    li_ok, li_urn = post_to_linkedin(publish_text, image_path)
 
     results = [
         "X: posted" if x_ok else "X: failed",
@@ -98,10 +99,10 @@ async def publish_post(text, image_path, message_id, context):
         os.unlink(image_path)
 
 
-async def delayed_publish(delay, text, image_path, message_id, context):
+async def delayed_publish(delay, text, image_path, message_id, context, source_url=""):
     """Wait then publish. Can be cancelled."""
     await asyncio.sleep(delay * 60)
-    await publish_post(text, image_path, message_id, context)
+    await publish_post(text, image_path, message_id, context, source_url)
     scheduled_tasks.pop(message_id, None)
 
 
@@ -155,6 +156,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = post["text"]
     image_path = post.get("image_path")
+    source_url = post.get("source_url", "")
 
     if action.startswith("approve"):
         delay = int(action.split("|")[1])
@@ -179,14 +181,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         pending_posts[message_id] = post
         task = asyncio.create_task(
-            delayed_publish(delay, text, image_path, message_id, context)
+            delayed_publish(delay, text, image_path, message_id, context, source_url)
         )
         scheduled_tasks[message_id] = task
 
     elif action == "postnow":
         pending_posts.pop(message_id, None)
         await edit_msg(query, f"*Posting now...*\n\n{text}")
-        await publish_post(text, image_path, message_id, context)
+        await publish_post(text, image_path, message_id, context, source_url)
 
     elif action == "reject":
         pending_posts.pop(message_id, None)
