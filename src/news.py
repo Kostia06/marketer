@@ -42,6 +42,9 @@ JUNK_IMAGE_PATTERNS = [
     r"medium\.com/_/stat",
     r"gravatar",
     r"cdn\.substack",
+    r"substackcdn",
+    r"subscribe[-_]?card",
+    r"substack\.com",
     r"wp-content/uploads.*?site[-_]?icon",
 ]
 
