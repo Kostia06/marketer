@@ -13,7 +13,7 @@ from src.config import (
 )
 from src.ai import generate_post
 from src.platforms.x import post_to_x, delete_from_x
-from src.platforms.linkedin import post_to_linkedin
+from src.platforms.linkedin import post_to_linkedin, delete_from_linkedin
 
 pending_posts: dict[int, dict] = {}
 scheduled_tasks: dict[int, asyncio.Task] = {}
@@ -70,14 +70,14 @@ async def send_for_approval(app: Application, post: dict):
 async def publish_post(text, image_path, message_id, context):
     """Publish to X and LinkedIn, then show result with delete button."""
     x_ok, x_id = post_to_x(text, image_path)
-    li_ok = post_to_linkedin(text)
+    li_ok, li_urn = post_to_linkedin(text, image_path)
 
     results = [
         "X: posted" if x_ok else "X: failed",
         "LinkedIn: posted" if li_ok else "LinkedIn: failed",
     ]
 
-    posted_results[message_id] = {"x_id": x_id, "text": text}
+    posted_results[message_id] = {"x_id": x_id, "li_urn": li_urn, "text": text}
 
     delete_keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Delete Posts", callback_data=f"delete|{message_id}")]
@@ -117,13 +117,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if action.startswith("delete"):
         ref_id = int(action.split("|")[1])
         result = posted_results.pop(ref_id, None)
+        statuses = []
         if result and result.get("x_id"):
             ok = delete_from_x(result["x_id"])
-            status = "Deleted from X" if ok else "Failed to delete from X"
+            statuses.append("X: deleted" if ok else "X: failed to delete")
         else:
-            status = "No X post to delete"
+            statuses.append("X: nothing to delete")
+        if result and result.get("li_urn"):
+            ok = delete_from_linkedin(result["li_urn"])
+            statuses.append("LinkedIn: deleted" if ok else "LinkedIn: failed to delete")
+        else:
+            statuses.append("LinkedIn: nothing to delete")
         await query.edit_message_text(
-            f"*{status}*\n(LinkedIn doesn't support delete via API)",
+            "*Delete results:*\n" + "\n".join(statuses),
             parse_mode="Markdown",
         )
         return
