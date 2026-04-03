@@ -16,6 +16,7 @@ from src.config import (
 from src.ai import generate_post
 from src.platforms.x import post_to_x, delete_from_x
 from src.platforms.linkedin import post_to_linkedin
+from src.history import save_post
 
 pending_posts: dict[int, dict] = {}
 scheduled_tasks: dict[int, asyncio.Task] = {}
@@ -82,6 +83,8 @@ async def publish_post(text, image_path, message_id, context, source_url=""):
     ]
 
     posted_results[message_id] = {"x_id": x_id, "li_urn": li_urn, "text": text}
+    if x_ok or li_ok:
+        save_post(text, source_url)
 
     delete_keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Delete Posts", callback_data=f"delete|{message_id}")]

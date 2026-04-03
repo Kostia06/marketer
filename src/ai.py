@@ -3,6 +3,7 @@ from google import genai
 from src.config import GEMINI_API_KEY, logger
 from src.news import fetch_top_stories, fetch_article_image, download_image
 from src.toner import load_style_guide
+from src.history import get_recent_topics
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -41,8 +42,11 @@ def generate_post() -> dict:
     prompt = (
         f"Here are today's top tech news stories:\n\n"
         f"{headlines}\n\n"
+        "ALREADY POSTED — do NOT pick these topics or sources again:\n"
+        f"{get_recent_topics()}\n\n"
         "TOPIC SELECTION — pick the story that:\n"
         "- Would get the most engagement from a BROAD dev audience (not just niche hobbyists)\n"
+        "- Has NOT been covered in the 'ALREADY POSTED' list above\n"
         "- Is about something developers actually care about: languages, frameworks, big tech drama, AI, tools, career, industry shifts\n"
         "- SKIP stories about: obscure utilities, hardware quirks, academic papers nobody reads, niche OS tools, random personal blogs\n"
         "- Prefer: controversial takes, big company moves, new language/framework releases, security breaches, AI developments, developer culture\n\n"
