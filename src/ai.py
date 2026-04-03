@@ -32,8 +32,8 @@ def generate_post() -> dict:
 
     Returns {"text": str, "source_url": str, "image_path": str | None}
     """
-    stories = fetch_top_stories(10)
-    headlines = "\n".join(f"- {s['title']} ({s['url']})" for s in stories)
+    stories = fetch_top_stories(30)
+    headlines = "\n".join(f"- {s['title']} (score: {s['score']}) ({s['url']})" for s in stories)
 
     style_context = build_style_context()
     style_block = f"\n\nSTYLE GUIDE (learned from top tech creators):\n{style_context}" if style_context else ""
@@ -41,7 +41,12 @@ def generate_post() -> dict:
     prompt = (
         f"Here are today's top tech news stories:\n\n"
         f"{headlines}\n\n"
-        "Pick the MOST interesting one and write a social media post about it.\n\n"
+        "TOPIC SELECTION — pick the story that:\n"
+        "- Would get the most engagement from a BROAD dev audience (not just niche hobbyists)\n"
+        "- Is about something developers actually care about: languages, frameworks, big tech drama, AI, tools, career, industry shifts\n"
+        "- SKIP stories about: obscure utilities, hardware quirks, academic papers nobody reads, niche OS tools, random personal blogs\n"
+        "- Prefer: controversial takes, big company moves, new language/framework releases, security breaches, AI developments, developer culture\n\n"
+        "Write a social media post about it.\n\n"
         "TONE RULES:\n"
         "- Write like a dev telling a friend something cool over coffee\n"
         "- Lowercase is fine. No corporate speak. No buzzwords.\n"
