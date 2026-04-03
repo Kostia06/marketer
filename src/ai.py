@@ -78,6 +78,7 @@ def generate_post() -> dict:
         "- no emoji unless it makes the joke land better. one max.\n"
         "- do not end with a question or a call to action. just let the observation land.\n"
         "- the post should feel like something you noticed today, not something you planned.\n"
+        "- write the post as ONE continuous paragraph. no line breaks between sentences.\n"
         f"{style_block}\n\n"
         'Return JSON only: {"text": "the post", "source_url": "the article url you picked"}'
     )

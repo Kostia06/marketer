@@ -73,9 +73,11 @@ async def send_for_approval(app: Application, post: dict):
 
 async def publish_post(text, image_path, message_id, context, source_url=""):
     """Publish to X and LinkedIn, then show result with delete button."""
-    publish_text = f"{text}\n\n{source_url}" if source_url else text
-    x_ok, x_id = post_to_x(publish_text, image_path)
-    li_ok, li_urn = post_to_linkedin(publish_text, image_path)
+    clean_text = text.replace("\n", " ").strip()
+    x_text = f"{clean_text} {source_url}".strip() if source_url else clean_text
+    li_text = f"{clean_text}\n\n{source_url}".strip() if source_url else clean_text
+    x_ok, x_id = post_to_x(x_text, image_path)
+    li_ok, li_urn = post_to_linkedin(li_text, image_path)
 
     results = [
         "X: posted" if x_ok else "X: failed",
