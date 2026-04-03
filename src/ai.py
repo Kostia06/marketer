@@ -67,6 +67,8 @@ def generate_post() -> dict:
         "- a real situation every dev has been in but never said out loud\n"
         "- an ironic comparison that needs no explanation\n"
         "- something that makes a dev laugh and immediately think of a coworker\n\n"
+        "NEVER write about: crypto, DeFi, NFTs, blockchain, web3, tokens, Solana, Bitcoin, Ethereum.\n"
+        "Stick to: software, AI, tools, and developer culture.\n\n"
         "GOOD EXAMPLES:\n"
         '- "our \'microservices architecture\' is just 14 node servers that all call each other in a circle. we have a diagram. it does not help."\n'
         '- "the intern fixed a bug in 20 minutes that the senior dev said was \'just how it works\' for 3 years."\n'
