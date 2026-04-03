@@ -1,8 +1,10 @@
 import os
 import random
 import asyncio
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
 from telegram.ext import Application, ContextTypes
+
+NO_PREVIEW = LinkPreviewOptions(is_disabled=True)
 
 from src.config import (
     TELEGRAM_CHAT_ID,
@@ -61,6 +63,7 @@ async def send_for_approval(app: Application, post: dict):
             text=caption,
             parse_mode="Markdown",
             reply_markup=reply_markup,
+            link_preview_options=NO_PREVIEW,
         )
 
     pending_posts[msg.message_id] = post
@@ -87,6 +90,7 @@ async def publish_post(text, image_path, message_id, context):
         chat_id=TELEGRAM_CHAT_ID,
         text=f"*Post published!*\n" + "\n".join(results) + f"\n\n_{text}_",
         parse_mode="Markdown",
+        link_preview_options=NO_PREVIEW,
         reply_markup=delete_keyboard,
     )
 
