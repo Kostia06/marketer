@@ -1,4 +1,5 @@
 import re
+import random
 import tempfile
 import requests
 from src.config import logger, UNSPLASH_ACCESS_KEY
@@ -80,7 +81,7 @@ def search_unsplash(query: str) -> str | None:
     try:
         resp = requests.get(
             "https://api.unsplash.com/search/photos",
-            params={"query": query, "per_page": 1, "orientation": "landscape"},
+            params={"query": f"{query} technology coding", "per_page": 3, "orientation": "landscape"},
             headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
             timeout=10,
         )
@@ -90,7 +91,8 @@ def search_unsplash(query: str) -> str | None:
         results = resp.json().get("results", [])
         if not results:
             return None
-        return results[0]["urls"]["regular"]
+        pick = random.choice(results)
+        return pick["urls"]["regular"]
     except Exception as e:
         logger.error(f"Unsplash search failed: {e}")
         return None

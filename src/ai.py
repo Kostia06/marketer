@@ -56,7 +56,7 @@ def generate_post() -> dict:
         "- 'apple just added a feature linux had in 2004. innovation. #wwdc'\n"
         "- 'new js framework just dropped. we are now truly blessed #javascript'\n"
         f"{style_block}\n\n"
-        'Return JSON only: {"text": "the post", "source_url": "the article url you picked", "image_keyword": "1-2 word search term for a relevant photo"}'
+        'Return JSON only: {"text": "the post", "source_url": "the article url you picked", "image_keyword": "1-2 word TECH search term for a stock photo, e.g. server rack, code screen, laptop desk, circuit board, data center"}'
     )
 
     response = client.models.generate_content(
