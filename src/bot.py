@@ -210,6 +210,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Posts every *{POST_INTERVAL_HOURS}h* with your approval.\n\n"
         "Commands:\n"
         "/generate — AI post from latest news\n"
+        "/meme — generate a coding meme\n"
         "/post your text here — preview your own post\n"
         "/tone — refresh style guide\n\n"
         "Buttons:\n"
@@ -236,6 +237,16 @@ async def post_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     post = {"text": user_text, "source_url": "", "image_path": None}
     await send_for_approval(context.application, post)
+
+
+async def meme_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Generating a coding meme...")
+    from src.memes import generate_meme
+    post = generate_meme()
+    if post:
+        await send_for_approval(context.application, post)
+    else:
+        await update.message.reply_text("Meme generation failed. Try again.")
 
 
 async def tone_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
