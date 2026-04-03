@@ -24,11 +24,16 @@ async def send_for_approval(app: Application, post: dict):
     image_path = post.get("image_path")
     source_url = post.get("source_url", "")
 
-    keyboard = [[
-        InlineKeyboardButton("Approve", callback_data=f"approve|{delay}"),
-        InlineKeyboardButton("Reject", callback_data="reject"),
-        InlineKeyboardButton("Rewrite", callback_data="rewrite"),
-    ]]
+    keyboard = [
+        [
+            InlineKeyboardButton("Approve", callback_data=f"approve|{delay}"),
+            InlineKeyboardButton("Post Now", callback_data="postnow"),
+        ],
+        [
+            InlineKeyboardButton("Reject", callback_data="reject"),
+            InlineKeyboardButton("Rewrite", callback_data="rewrite"),
+        ],
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     source_line = f"Source: {source_url}\n" if source_url else ""
@@ -88,6 +93,30 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await asyncio.sleep(delay * 60)
+
+        x_ok = post_to_x(text, image_path)
+        li_ok = post_to_linkedin(text)
+
+        results = [
+            "X (Twitter): posted" if x_ok else "X (Twitter): failed",
+            "LinkedIn: posted" if li_ok else "LinkedIn: failed",
+        ]
+        await context.bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text="*Post published!*\n" + "\n".join(results),
+            parse_mode="Markdown",
+        )
+
+        if image_path and os.path.exists(image_path):
+            os.unlink(image_path)
+
+    elif action == "postnow":
+        pending_posts.pop(message_id, None)
+
+        if query.message.photo:
+            await query.edit_message_caption(caption=f"*Posting now...*\n\n{text}", parse_mode="Markdown")
+        else:
+            await query.edit_message_text(f"*Posting now...*\n\n{text}", parse_mode="Markdown")
 
         x_ok = post_to_x(text, image_path)
         li_ok = post_to_linkedin(text)
