@@ -1,8 +1,11 @@
 import os
+import time
 import random
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
 from telegram.ext import Application, ContextTypes
+
+BOT_START_TIME = time.time()
 
 NO_PREVIEW = LinkPreviewOptions(is_disabled=True)
 
@@ -385,6 +388,23 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*Rewrite* — regenerate\n"
         "*Cancel* — stop a scheduled post\n"
         "*Delete Posts* — remove after publishing",
+        parse_mode="Markdown",
+    )
+
+
+async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uptime_sec = int(time.time() - BOT_START_TIME)
+    hours, remainder = divmod(uptime_sec, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    from src.history import load_history
+    post_count = len(load_history())
+    await update.message.reply_text(
+        f"*pong.* bot is live.\n\n"
+        f"uptime: {hours}h {minutes}m {seconds}s\n"
+        f"pending approvals: {len(pending_posts)}\n"
+        f"pending threads: {len(pending_threads)}\n"
+        f"pending replies: {len(pending_replies)}\n"
+        f"total posts published: {post_count}",
         parse_mode="Markdown",
     )
 

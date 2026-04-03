@@ -4,7 +4,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
 from src.config import TELEGRAM_TOKEN, logger
 from src.bot import (
-    start_command, generate_command, thread_command, linkedin_command,
+    start_command, ping_command, generate_command, thread_command, linkedin_command,
     reply_command, meme_command, post_command, tone_command, button_handler,
 )
 from src.scheduler import post_loop
@@ -13,6 +13,7 @@ from src.scheduler import post_loop
 async def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("ping", ping_command))
     app.add_handler(CommandHandler("generate", generate_command))
     app.add_handler(CommandHandler("thread", thread_command))
     app.add_handler(CommandHandler("linkedin", linkedin_command))
