@@ -1,18 +1,7 @@
 import json
 from google import genai
 from src.config import GEMINI_API_KEY, logger
-import random
-from src.news import fetch_top_stories, fetch_article_image, search_unsplash, download_image
-
-BROAD_TECH_KEYWORDS = [
-    "programming code screen",
-    "software developer laptop",
-    "server data center",
-    "coding terminal dark",
-    "tech workspace monitor",
-    "developer typing keyboard",
-    "computer science abstract",
-]
+from src.news import fetch_top_stories, fetch_article_image, download_image
 from src.toner import load_style_guide
 
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -105,14 +94,6 @@ def generate_post() -> dict:
             image_path = download_image(image_url)
             if image_path:
                 logger.info(f"Using article image from {image_url}")
-
-    if not image_path:
-        keyword = random.choice(BROAD_TECH_KEYWORDS)
-        unsplash_url = search_unsplash(keyword)
-        if unsplash_url:
-            image_path = download_image(unsplash_url)
-            if image_path:
-                logger.info(f"Using Unsplash image for '{keyword}'")
 
     return {
         "text": result["text"],
