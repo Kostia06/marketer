@@ -107,3 +107,92 @@ def generate_post() -> dict:
         "source_url": source_url,
         "image_path": image_path,
     }
+
+
+def generate_thread() -> dict:
+    """Generate a 5-7 tweet thread on a trending dev topic."""
+    stories = fetch_top_stories(30)
+    headlines = "\n".join(f"- {s['title']} (score: {s['score']}) ({s['url']})" for s in stories)
+    history_context = get_recent_topics()
+
+    prompt = (
+        f"Here are today's top tech news:\n\n{headlines}\n\n"
+        f"ALREADY POSTED — avoid these:\n{history_context}\n\n"
+        "Pick the most interesting story and write a Twitter THREAD (5-7 tweets).\n\n"
+        "THREAD RULES:\n"
+        "- Tweet 1: hook that makes people stop scrolling. bold claim or surprising observation. end with 'a thread:' or similar.\n"
+        "- Tweets 2-5: each tweet adds one specific point. use real details, examples, numbers.\n"
+        "- Last tweet: punchline, takeaway, or call to follow for more.\n"
+        "- Each tweet under 280 chars. each must stand alone but flow as a story.\n"
+        "- lowercase. casual. same deadpan senior dev voice.\n"
+        "- no numbering like '1/' or 'thread:' on every tweet. just tweet 1 sets it up.\n"
+        "- NEVER write about crypto, DeFi, NFTs, blockchain, web3.\n\n"
+        "GOOD THREAD EXAMPLE:\n"
+        '- "i\'ve mass been writing rust for 2 years and here are the mass things nobody warns you about. a thread."\n'
+        '- "the borrow checker will mass make you mass question every life decision. but after a month it becomes your best friend."\n'
+        '- "cargo is the mass best package manager in any language. this is not up for mass debate."\n\n'
+        'Return JSON: {"tweets": ["tweet 1", "tweet 2", ...], "source_url": "article url", "topic": "brief topic"}'
+    )
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config={"response_mime_type": "application/json"},
+    )
+
+    result = json.loads(response.text.strip())
+    return {
+        "tweets": result["tweets"],
+        "source_url": result.get("source_url", ""),
+        "topic": result.get("topic", "dev thread"),
+    }
+
+
+def generate_linkedin_post() -> dict:
+    """Generate a long-form LinkedIn post (1000+ chars) with story format."""
+    stories = fetch_top_stories(30)
+    headlines = "\n".join(f"- {s['title']} (score: {s['score']}) ({s['url']})" for s in stories)
+    history_context = get_recent_topics()
+
+    prompt = (
+        f"Here are today's top tech news:\n\n{headlines}\n\n"
+        f"ALREADY POSTED — avoid these:\n{history_context}\n\n"
+        "Pick a story and write a LINKEDIN POST. LinkedIn rewards long-form storytelling.\n\n"
+        "FORMAT (follow this exactly):\n"
+        "- Line 1: bold hook that stops the scroll. one sentence.\n"
+        "- Line 2: empty line\n"
+        "- Lines 3-8: the story. what happened, why it matters, what you think about it.\n"
+        "  write like you're telling a colleague over coffee. use short paragraphs (2-3 sentences each).\n"
+        "  be specific — names, numbers, real details.\n"
+        "- Line 9: empty line\n"
+        "- Last 2-3 lines: your takeaway. what should devs learn from this?\n"
+        "- Very last line: 3-5 hashtags\n\n"
+        "VOICE:\n"
+        "- professional but human. not corporate.\n"
+        "- write as a developer sharing an insight, not a thought leader performing.\n"
+        "- lowercase is fine for casual effect but linkedin is slightly more polished than twitter.\n"
+        "- 1000-1500 characters total.\n"
+        "- NEVER use: innovative, cutting-edge, game-changer, leverage, synergy, ecosystem.\n"
+        "- NEVER write about crypto, DeFi, NFTs, blockchain, web3.\n\n"
+        "GOOD LINKEDIN EXAMPLE:\n"
+        '"a former azure core engineer just published a 4000-word breakdown of how microsoft eroded trust in their cloud platform.\\n\\n'
+        "i read the whole thing. it's not a rant — it's an engineering post-mortem from someone who was there.\\n\\n"
+        "the tldr: shortcuts in architecture decisions compounded over years. what started as 'acceptable tradeoffs' became systemic reliability issues.\\n\\n"
+        "this is the part that hit me — the decisions that caused the biggest problems all looked reasonable at the time. it was the accumulation that killed trust.\\n\\n"
+        "every engineering team should read this. not because azure is bad, but because these patterns exist everywhere.\\n\\n"
+        '#cloud #azure #softwareengineering #devops"\n\n'
+        'Return JSON: {"text": "the full linkedin post", "source_url": "article url"}'
+    )
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config={"response_mime_type": "application/json"},
+    )
+
+    result = json.loads(response.text.strip())
+    return {
+        "text": result["text"],
+        "source_url": result.get("source_url", ""),
+        "image_path": None,
+    }
