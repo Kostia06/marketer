@@ -77,6 +77,7 @@ def generate_post() -> dict:
         "RULES:\n"
         "- under 260 characters\n"
         "- 1 hashtag max, only if it genuinely fits. zero is fine.\n"
+        "- NEVER use hashtags: #DevLife #Developer #Coding #Programming #Tech — these are dead. only specific ones like #rust #typescript #llm.\n"
         "- no emoji unless it makes the joke land better. one max.\n"
         "- do not end with a question or a call to action. just let the observation land.\n"
         "- the post should feel like something you noticed today, not something you planned.\n"

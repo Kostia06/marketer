@@ -44,9 +44,16 @@ def generate_meme() -> dict | None:
         "- the joke should land visually with the meme format\n"
         "- think about what makes this specific template funny\n"
         "- no hashtags in the meme text\n\n"
+        "CAPTION RULES:\n"
+        "- the meme speaks for itself. the caption just adds to the joke, NEVER explains it.\n"
+        "- one dry sentence max. lowercase. deadpan.\n"
+        "- NEVER use hashtags: #DevLife #Developer #Coding #Programming #Tech — these are dead.\n"
+        "- only use a specific hashtag like #rust #typescript #llm if it genuinely fits. zero hashtags is fine.\n"
+        "- good captions: 'daily standup really said not today', 'the quick question guy strikes again', 'prod is fine. prod is always fine.'\n"
+        "- bad captions: 'Every developer knows this struggle! #DevLife', 'The eternal battle of coding #Programming'\n\n"
         f"Return JSON: {{\"template_name\": \"{template['name']}\", "
         f"\"boxes\": [\"text for box 1\", \"text for box 2\", ...], "
-        f"\"caption\": \"optional tweet caption under 100 chars, with 1 hashtag\"}}"
+        f"\"caption\": \"dry one-liner caption\"}}"
     )
 
     try:
