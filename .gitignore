@@ -1,3 +1,5 @@
 node_modules/
 .env
 *.log
+style_guide.json
+__pycache__/

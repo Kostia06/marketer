@@ -143,3 +143,18 @@ async def generate_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Fetching latest tech news...")
     post = generate_post()
     await send_for_approval(context.application, post)
+
+
+async def tone_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Analyzing top tech creators... this takes a minute.")
+    from src.toner import run_analysis
+    guide = run_analysis()
+    patterns = len(guide.get("patterns", []))
+    hooks = len(guide.get("hooks", []))
+    rules = len(guide.get("tone_rules", []))
+    await update.message.reply_text(
+        f"*Style guide updated!*\n\n"
+        f"Learned {patterns} patterns, {hooks} hooks, {rules} tone rules\n"
+        f"Future posts will use these insights.",
+        parse_mode="Markdown",
+    )
