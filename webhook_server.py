@@ -25,7 +25,7 @@ BOT_DIR = os.path.dirname(os.path.abspath(__file__))
 def verify_signature(payload: bytes, signature: str) -> bool:
     if not SECRET:
         return True
-    expected = "sha256=" + hmac.new(SECRET.encode(), payload, hashlib.sha256).hexdigest()
+    expected = "sha256=" + hmac.HMAC(SECRET.encode(), payload, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
 
 
