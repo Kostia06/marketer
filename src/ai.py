@@ -57,20 +57,36 @@ def generate_post() -> dict:
         "- Is about something developers actually care about: languages, frameworks, big tech drama, AI, tools, career, industry shifts\n"
         "- SKIP stories about: obscure utilities, hardware quirks, academic papers nobody reads, niche OS tools, random personal blogs\n"
         "- Prefer: controversial takes, big company moves, new language/framework releases, security breaches, AI developments, developer culture\n\n"
-        "Write a social media post about it.\n\n"
-        "TONE RULES:\n"
-        "- Write like a dev telling a friend something cool over coffee\n"
-        "- Lowercase is fine. No corporate speak. No buzzwords.\n"
-        "- Be genuinely funny — dry humor, sarcasm, or a witty observation\n"
-        "- NEVER use words like: revolutionize, game-changer, exciting, incredible, amazing, mind-blowing, unlock, unleash, leverage\n"
-        "- NEVER start with 'Just learned...' or 'Did you know...'\n"
-        "- No fake enthusiasm. If something is mid, say it's mid.\n"
-        "- One emoji max. Zero is fine.\n"
-        "- Under 280 characters. 1-2 hashtags max, placed naturally.\n\n"
-        "Good examples:\n"
-        "- 'turns out the fastest json parser is written in rust. of course it is. #rust'\n"
-        "- 'apple just added a feature linux had in 2004. innovation. #wwdc'\n"
-        "- 'new js framework just dropped. we are now truly blessed #javascript'\n"
+        "Write a social media post about it using this voice:\n\n"
+        "VOICE:\n"
+        "- lowercase always. talk like a smart dev texting a friend.\n"
+        "- dry humor. short sentences. no fluff.\n"
+        "- never use: revolutionize, game-changer, exciting, incredible, amazing, innovative, cutting-edge, leverage\n\n"
+        "STRUCTURE — every post must have 3 parts:\n"
+        "1. HOOK (first line) — a bold claim, ironic observation, or uncomfortable truth. make them stop scrolling.\n"
+        "2. BODY (1-2 lines max) — back it up or twist it. keep it punchy.\n"
+        "3. REPLY HOOK (last line) — ALWAYS end with something that forces a reply. rotate between:\n"
+        '   - "am i wrong?"\n'
+        '   - "how many of you have done this?"\n'
+        '   - "which side are you on?"\n'
+        '   - "be honest."\n'
+        '   - "change my mind."\n'
+        '   - "your team does this too, admit it."\n\n'
+        "POST TYPES — rotate between these:\n"
+        '1. HOT TAKE: "[uncomfortable truth devs won\'t say]. change my mind."\n'
+        '2. QUESTION: "why do we still accept [thing everyone does]? be honest."\n'
+        '3. POLL BAIT: "[option a] vs [option b]. no wrong answers, but there are wrong answers."\n'
+        '4. CONFESSION: "every dev has done [relatable thing]. how many of you have done this?"\n'
+        '5. OBSERVATION: "funny how [ironic tech observation]. am i wrong?"\n\n'
+        "GOOD EXAMPLES:\n"
+        '- "we don\'t have bugs. we have undocumented features that somehow made it to prod. your team does this too, admit it."\n'
+        '- "tabs vs spaces ended friendships. light mode vs dark mode ended careers. which side are you on?"\n'
+        '- "you don\'t have a deployment pipeline. you have a prayer and a bash script. am i wrong?"\n\n'
+        "RULES:\n"
+        "- under 280 characters total\n"
+        "- 1 hashtag max, only if it fits naturally at the end\n"
+        "- zero corporate speak\n"
+        "- the reply hook is NOT optional. every post ends with one.\n"
         f"{style_block}\n\n"
         'Return JSON only: {"text": "the post", "source_url": "the article url you picked"}'
     )
