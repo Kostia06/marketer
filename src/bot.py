@@ -15,7 +15,7 @@ from src.config import (
 )
 from src.ai import generate_post
 from src.platforms.x import post_to_x, delete_from_x
-from src.platforms.linkedin import post_to_linkedin
+from src.platforms.linkedin import post_to_linkedin, delete_from_linkedin
 from src.history import save_post
 
 pending_posts: dict[int, dict] = {}
@@ -133,7 +133,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             statuses.append("X: deleted" if ok else "X: failed to delete")
         else:
             statuses.append("X: nothing to delete")
-        statuses.append("LinkedIn: delete manually at linkedin.com")
+        if result and result.get("li_urn"):
+            ok = delete_from_linkedin(result["li_urn"])
+            statuses.append("LinkedIn: deleted" if ok else "LinkedIn: failed to delete")
+        else:
+            statuses.append("LinkedIn: nothing to delete")
         await query.edit_message_text(
             "*Delete results:*\n" + "\n".join(statuses),
             parse_mode="Markdown",
