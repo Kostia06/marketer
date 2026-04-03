@@ -1,4 +1,5 @@
 import json
+import os
 import random
 import tempfile
 import requests
@@ -74,8 +75,8 @@ def create_meme_image(template_id: str, boxes: list[str]) -> str | None:
     try:
         params = {
             "template_id": template_id,
-            "username": "imgflip_hubot",
-            "password": "imgflip_hubot",
+            "username": os.getenv("IMGFLIP_USERNAME", ""),
+            "password": os.getenv("IMGFLIP_PASSWORD", ""),
         }
         for i, text in enumerate(boxes):
             params[f"boxes[{i}][text]"] = text
