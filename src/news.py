@@ -1,7 +1,7 @@
 import re
 import tempfile
 import requests
-from src.config import logger
+from src.config import logger, UNSPLASH_ACCESS_KEY
 
 HACKERNEWS_TOP = "https://hacker-news.firebaseio.com/v0/topstories.json"
 HACKERNEWS_ITEM = "https://hacker-news.firebaseio.com/v0/item/{}.json"
@@ -71,6 +71,29 @@ def fetch_article_image(url: str) -> str | None:
     except Exception as e:
         logger.error(f"Failed to fetch og:image from {url}: {e}")
     return None
+
+
+def search_unsplash(query: str) -> str | None:
+    """Search Unsplash for a relevant photo. Returns image URL or None."""
+    if not UNSPLASH_ACCESS_KEY:
+        return None
+    try:
+        resp = requests.get(
+            "https://api.unsplash.com/search/photos",
+            params={"query": query, "per_page": 1, "orientation": "landscape"},
+            headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            logger.error(f"Unsplash search failed: {resp.status_code}")
+            return None
+        results = resp.json().get("results", [])
+        if not results:
+            return None
+        return results[0]["urls"]["regular"]
+    except Exception as e:
+        logger.error(f"Unsplash search failed: {e}")
+        return None
 
 
 def download_image(url: str) -> str | None:
