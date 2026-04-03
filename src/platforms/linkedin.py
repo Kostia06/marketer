@@ -107,8 +107,9 @@ def post_to_linkedin(content: str, image_path: str | None = None) -> tuple[bool,
 
 def delete_from_linkedin(post_urn: str) -> bool:
     try:
+        encoded_urn = requests.utils.quote(post_urn, safe="")
         resp = requests.delete(
-            f"https://api.linkedin.com/v2/ugcPosts/{post_urn}",
+            f"https://api.linkedin.com/v2/ugcPosts/{encoded_urn}",
             headers=HEADERS,
             timeout=15,
         )
