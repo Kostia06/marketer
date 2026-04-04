@@ -27,6 +27,19 @@ pending_threads: dict[int, dict] = {}
 pending_replies: dict[int, dict] = {}
 scheduled_tasks: dict[int, asyncio.Task] = {}
 posted_results: dict[int, dict] = {}
+last_approval_msg_id: int | None = None
+
+
+async def delete_msg(bot, chat_id, msg_id):
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=msg_id)
+    except Exception:
+        pass
+
+
+async def auto_delete_after(bot, chat_id, msg_id, seconds=30):
+    await asyncio.sleep(seconds)
+    await delete_msg(bot, chat_id, msg_id)
 
 
 async def send_for_approval(app: Application, post: dict):
@@ -73,7 +86,18 @@ async def send_for_approval(app: Application, post: dict):
             link_preview_options=NO_PREVIEW,
         )
 
+    global last_approval_msg_id
+    if last_approval_msg_id:
+        await delete_msg(app.bot, TELEGRAM_CHAT_ID, last_approval_msg_id)
+
     pending_posts[msg.message_id] = post
+    last_approval_msg_id = msg.message_id
+
+    try:
+        await app.bot.pin_chat_message(chat_id=TELEGRAM_CHAT_ID, message_id=msg.message_id, disable_notification=True)
+    except Exception:
+        pass
+
     logger.info(f"Sent post for approval (message_id={msg.message_id})")
 
 
@@ -94,13 +118,16 @@ async def publish_post(text, image_path, message_id, context, source_url=""):
     if x_ok or li_ok:
         save_post(text, source_url)
 
+    await delete_msg(context.bot, TELEGRAM_CHAT_ID, message_id)
+
     delete_keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Delete Posts", callback_data=f"delete|{message_id}")]
     ])
 
-    await context.bot.send_message(
+    short_text = text[:80] + "..." if len(text) > 80 else text
+    confirm_msg = await context.bot.send_message(
         chat_id=TELEGRAM_CHAT_ID,
-        text=f"*Post published!*\n" + "\n".join(results) + f"\n\n_{text}_",
+        text=f"*Published:* {', '.join(results)}\n_{short_text}_",
         parse_mode="Markdown",
         link_preview_options=NO_PREVIEW,
         reply_markup=delete_keyboard,
@@ -136,18 +163,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         statuses = []
         if result and result.get("x_id"):
             ok = delete_from_x(result["x_id"])
-            statuses.append("X: deleted" if ok else "X: failed to delete")
+            statuses.append("X: deleted" if ok else "X: failed")
         else:
             statuses.append("X: nothing to delete")
         if result and result.get("li_urn"):
             ok = delete_from_linkedin(result["li_urn"])
-            statuses.append("LinkedIn: deleted" if ok else "LinkedIn: failed to delete")
+            statuses.append("LinkedIn: deleted" if ok else "LinkedIn: failed")
         else:
             statuses.append("LinkedIn: nothing to delete")
-        await query.edit_message_text(
-            "*Delete results:*\n" + "\n".join(statuses),
-            parse_mode="Markdown",
-        )
+        await query.edit_message_text(f"*Deleted:* {', '.join(statuses)}", parse_mode="Markdown")
+        asyncio.create_task(auto_delete_after(context.bot, TELEGRAM_CHAT_ID, message_id, 15))
         return
 
     if action == "cancel":
@@ -157,7 +182,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         post = pending_posts.pop(message_id, None)
         if post and post.get("image_path") and os.path.exists(post["image_path"]):
             os.unlink(post["image_path"])
-        await edit_msg(query, "*Cancelled.* Post will not be published.")
+        await delete_msg(context.bot, TELEGRAM_CHAT_ID, message_id)
+        tmp = await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="Cancelled.")
+        asyncio.create_task(auto_delete_after(context.bot, TELEGRAM_CHAT_ID, tmp.message_id, 10))
         return
 
     # ── Thread handlers ──
@@ -351,18 +378,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif action == "postnow":
         pending_posts.pop(message_id, None)
-        await edit_msg(query, f"*Posting now...*\n\n{text}")
         await publish_post(text, image_path, message_id, context, source_url)
 
     elif action == "reject":
         pending_posts.pop(message_id, None)
-        await edit_msg(query, "*Post rejected.* Next post at next interval.")
+        await delete_msg(context.bot, TELEGRAM_CHAT_ID, message_id)
         if image_path and os.path.exists(image_path):
             os.unlink(image_path)
+        tmp = await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="Rejected.")
+        asyncio.create_task(auto_delete_after(context.bot, TELEGRAM_CHAT_ID, tmp.message_id, 10))
 
     elif action == "rewrite":
         pending_posts.pop(message_id, None)
-        await edit_msg(query, "*Rewriting post, one moment...*")
+        await delete_msg(context.bot, TELEGRAM_CHAT_ID, message_id)
         if image_path and os.path.exists(image_path):
             os.unlink(image_path)
         new_post = generate_post()
@@ -380,6 +408,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/reply <tweet\\_url> — craft a reply to a tweet\n"
         "/meme — generate a coding meme\n"
         "/post your text here — preview your own post\n"
+        "/history — last 10 published posts\n"
+        "/queue — pending posts\n"
+        "/ping — server status\n"
         "/tone — refresh style guide\n\n"
         "Buttons:\n"
         "*Approve* — post after random delay\n"
@@ -526,6 +557,45 @@ async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         link_preview_options=NO_PREVIEW,
     )
     pending_replies[msg.message_id] = {"reply_text": reply_text, "tweet": tweet}
+
+
+async def history_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from src.history import load_history
+    history = load_history()
+    if not history:
+        await update.message.reply_text("No posts yet.")
+        return
+    recent = history[-10:][::-1]
+    lines = []
+    for i, h in enumerate(recent, 1):
+        text = h["text"][:60] + "..." if len(h["text"]) > 60 else h["text"]
+        lines.append(f"*{i}.* {text}")
+    await update.message.reply_text(
+        f"*Last {len(recent)} posts:*\n\n" + "\n\n".join(lines),
+        parse_mode="Markdown",
+        link_preview_options=NO_PREVIEW,
+    )
+
+
+async def queue_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    items = []
+    for mid, post in pending_posts.items():
+        text = post["text"][:50] + "..." if len(post["text"]) > 50 else post["text"]
+        scheduled = mid in scheduled_tasks
+        status = "scheduled" if scheduled else "awaiting approval"
+        items.append(f"- _{text}_ ({status})")
+    for mid, thread in pending_threads.items():
+        items.append(f"- Thread: _{thread['tweets'][0][:50]}..._ (awaiting approval)")
+    for mid, reply in pending_replies.items():
+        items.append(f"- Reply to @{reply['tweet']['author']} (awaiting approval)")
+    if not items:
+        await update.message.reply_text("Queue is empty.")
+        return
+    await update.message.reply_text(
+        f"*Queue ({len(items)}):*\n\n" + "\n".join(items),
+        parse_mode="Markdown",
+        link_preview_options=NO_PREVIEW,
+    )
 
 
 async def tone_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
