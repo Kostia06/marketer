@@ -12,7 +12,8 @@ post_count = 0
 
 async def post_loop(app: Application):
     global post_count
-    await asyncio.sleep(3)
+    logger.info(f"Scheduler started. First post in {POST_INTERVAL_HOURS} hours.")
+    await asyncio.sleep(POST_INTERVAL_HOURS * 3600)
     while True:
         try:
             is_meme = post_count % 3 == 2 or random.random() < 0.3
