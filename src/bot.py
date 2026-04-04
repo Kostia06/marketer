@@ -393,14 +393,23 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    import subprocess
     uptime_sec = int(time.time() - BOT_START_TIME)
     hours, remainder = divmod(uptime_sec, 3600)
     minutes, seconds = divmod(remainder, 60)
     from src.history import load_history
     post_count = len(load_history())
+    try:
+        commit = subprocess.check_output(["git", "log", "-1", "--format=%h %s"], text=True).strip()
+        last_updated = subprocess.check_output(["git", "log", "-1", "--format=%cr"], text=True).strip()
+    except Exception:
+        commit = "unknown"
+        last_updated = "unknown"
     await update.message.reply_text(
         f"*pong.* bot is live.\n\n"
         f"uptime: {hours}h {minutes}m {seconds}s\n"
+        f"version: `{commit}`\n"
+        f"last updated: {last_updated}\n"
         f"pending approvals: {len(pending_posts)}\n"
         f"pending threads: {len(pending_threads)}\n"
         f"pending replies: {len(pending_replies)}\n"
