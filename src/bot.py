@@ -28,6 +28,7 @@ pending_replies: dict[int, dict] = {}
 scheduled_tasks: dict[int, asyncio.Task] = {}
 posted_results: dict[int, dict] = {}
 last_approval_msg_id: int | None = None
+bot_message_ids: list[int] = []
 
 
 async def delete_msg(bot, chat_id, msg_id):
@@ -35,6 +36,12 @@ async def delete_msg(bot, chat_id, msg_id):
         await bot.delete_message(chat_id=chat_id, message_id=msg_id)
     except Exception:
         pass
+
+
+def track_msg(msg_id):
+    bot_message_ids.append(msg_id)
+    if len(bot_message_ids) > 100:
+        bot_message_ids.pop(0)
 
 
 async def auto_delete_after(bot, chat_id, msg_id, seconds=30):
@@ -92,6 +99,7 @@ async def send_for_approval(app: Application, post: dict):
 
     pending_posts[msg.message_id] = post
     last_approval_msg_id = msg.message_id
+    track_msg(msg.message_id)
 
     try:
         await app.bot.pin_chat_message(chat_id=TELEGRAM_CHAT_ID, message_id=msg.message_id, disable_notification=True)
@@ -125,7 +133,7 @@ async def publish_post(text, image_path, message_id, context, source_url=""):
     ])
 
     short_text = text[:80] + "..." if len(text) > 80 else text
-    confirm_msg = await context.bot.send_message(
+    confirm_msg = await context.bot.send_message(  # noqa
         chat_id=TELEGRAM_CHAT_ID,
         text=f"*Published:* {', '.join(results)}\n_{short_text}_",
         parse_mode="Markdown",
@@ -596,6 +604,26 @@ async def queue_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown",
         link_preview_options=NO_PREVIEW,
     )
+
+
+async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg_id = update.message.message_id
+    deleted = 0
+    for i in range(1, 100):
+        try:
+            await context.bot.delete_message(chat_id=TELEGRAM_CHAT_ID, message_id=msg_id - i)
+            deleted += 1
+        except Exception:
+            continue
+    try:
+        await update.message.delete()
+    except Exception:
+        pass
+    pending_posts.clear()
+    pending_threads.clear()
+    pending_replies.clear()
+    tmp = await context.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=f"Cleared {deleted} messages.")
+    asyncio.create_task(auto_delete_after(context.bot, TELEGRAM_CHAT_ID, tmp.message_id, 5))
 
 
 async def tone_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -6,7 +6,7 @@ from src.config import TELEGRAM_TOKEN, logger
 from src.bot import (
     start_command, ping_command, generate_command, thread_command, linkedin_command,
     reply_command, meme_command, post_command, history_command, queue_command,
-    tone_command, button_handler,
+    clear_command, tone_command, button_handler,
 )
 from src.scheduler import post_loop
 
@@ -23,6 +23,7 @@ async def main():
     app.add_handler(CommandHandler("post", post_command))
     app.add_handler(CommandHandler("history", history_command))
     app.add_handler(CommandHandler("queue", queue_command))
+    app.add_handler(CommandHandler("clear", clear_command))
     app.add_handler(CommandHandler("tone", tone_command))
     app.add_handler(CallbackQueryHandler(button_handler))
 
