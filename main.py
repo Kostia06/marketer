@@ -3,34 +3,21 @@ import asyncio
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler
 
 from src.config import TELEGRAM_TOKEN, logger
-from src.bot import (
-    start_command, ping_command, generate_command, thread_command, linkedin_command,
-    reply_command, meme_command, post_command, history_command, queue_command,
-    clear_command, tone_command, button_handler,
-)
+from src.bot import start_command, reply_command, post_command, button_handler
 from src.scheduler import post_loop
 
 
 async def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("ping", ping_command))
-    app.add_handler(CommandHandler("generate", generate_command))
-    app.add_handler(CommandHandler("thread", thread_command))
-    app.add_handler(CommandHandler("linkedin", linkedin_command))
     app.add_handler(CommandHandler("reply", reply_command))
-    app.add_handler(CommandHandler("meme", meme_command))
     app.add_handler(CommandHandler("post", post_command))
-    app.add_handler(CommandHandler("history", history_command))
-    app.add_handler(CommandHandler("queue", queue_command))
-    app.add_handler(CommandHandler("clear", clear_command))
-    app.add_handler(CommandHandler("tone", tone_command))
     app.add_handler(CallbackQueryHandler(button_handler))
 
     await app.initialize()
     await app.start()
     await app.updater.start_polling(drop_pending_updates=True)
-    logger.info("Bot started! Send /start in Telegram.")
+    logger.info("Bot started!")
     await post_loop(app)
 
 
