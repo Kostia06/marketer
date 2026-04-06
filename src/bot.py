@@ -291,8 +291,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if action == "cmd_clear":
-        for i in range(1, 100):
-            await delete_msg(context.bot, TELEGRAM_CHAT_ID, message_id - i)
         await delete_msg(context.bot, TELEGRAM_CHAT_ID, message_id)
         panel_msg_id = None
         pending_posts.clear()
